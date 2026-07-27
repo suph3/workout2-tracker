@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FitPulse Pro - Daily Workout & Weight Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Chart.js for lightweight standalone analytics charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">🏋️‍♂️</div>
+        <div>
+          <div class="brand-title">FitPulse <span class="badge-pro">PRO</span></div>
+        </div>
+      </div>
+
+      <!-- Date Selector -->
+      <div class="date-selector">
+        <button class="btn-icon" id="btn-prev-day">◄</button>
+        <div class="date-picker-wrap">
+          <span id="date-display-text">Today</span>
+          <input type="date" id="date-picker-input" />
+        </div>
+        <button class="btn-icon" id="btn-next-day">►</button>
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; items-center; gap: 8px;">
+        <button class="btn-secondary" id="btn-toggle-unit" style="padding: 6px 10px; font-weight: 800;">
+          <span id="unit-kg-label" style="color: #22c55e;">kg</span> / <span id="unit-lbs-label" style="color: #9ca3af;">lbs</span>
+        </button>
+        <button class="btn-primary" id="btn-account-modal" style="padding: 6px 12px; font-size: 12px;">
+          👤 <span id="nav-username">Athlete</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main App Content Screens -->
+  <main>
+    <!-- SCREEN 1: TODAY'S WORKOUT DASHBOARD -->
+    <section id="screen-today" class="screen active">
+      <!-- Daily Body Weight Logger -->
+      <div class="glass-card" style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div>
+            <h3 style="font-size: 14px; font-weight: 800;">⚖️ Daily Body Weight</h3>
+            <p style="font-size: 11px; color: var(--text-muted);">Track morning weight progress</p>
+          </div>
+          <div id="weight-diff-badge" style="font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: rgba(34,197,94,0.1); color: var(--primary);">--</div>
+        </div>
+        <form id="form-weight-logger" style="display: flex; gap: 10px;">
+          <input type="number" step="0.1" id="input-daily-weight" class="form-input" placeholder="Enter weight" style="font-size: 16px; font-weight: 700;" />
+          <button type="submit" class="btn-primary" style="white-space: nowrap;">Save Weight</button>
+        </form>
+      </div>
+
+      <!-- Logged Exercises Summary for Today -->
+      <div class="glass-card" style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 14px; font-weight: 800;">🏆 Today's Logged Movements (<span id="count-logged-today">0</span>)</h3>
+          <div id="active-categories-badges" style="display: flex; gap: 4px;"></div>
+        </div>
+        <div id="container-logged-exercises" style="display: flex; flex-direction: column; gap: 8px;">
+          <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 12px;">No exercise logged yet today. Select a movement below!</p>
+        </div>
+      </div>
+
+      <!-- Exercise Selector Header & Category Filter -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3 style="font-size: 14px; font-weight: 800;">✨ Choose Movement</h3>
+        <button class="btn-secondary" id="btn-open-custom-ex" style="font-size: 11px;">+ Custom Exercise</button>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="category-pills" id="container-category-pills">
+        <button class="pill-btn active" data-cat="ALL">All Exercises</button>
+        <button class="pill-btn" data-cat="Chest">Chest</button>
+        <button class="pill-btn" data-cat="Back">Back</button>
+        <button class="pill-btn" data-cat="Abs">Abs</button>
+        <button class="pill-btn" data-cat="Biceps">Biceps</button>
+        <button class="pill-btn" data-cat="Triceps">Triceps</button>
+        <button class="pill-btn" data-cat="Legs">Legs</button>
+        <button class="pill-btn" data-cat="Cardio">Cardio</button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="form-group">
+        <input type="text" id="input-search-exercise" class="form-input" placeholder="🔍 Search exercises..." style="font-size: 12px;" />
+      </div>
+
+      <!-- Exercises Grid -->
+      <div class="grid-2" id="container-exercise-grid"></div>
+    </section>
+
+    <!-- SCREEN 2: HISTORY LOGS -->
+    <section id="screen-history" class="screen">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 16px; font-weight: 800;">📅 Session History</h2>
+        <select id="select-history-filter" class="form-input" style="width: auto; padding: 4px 10px; font-size: 12px; font-weight: 700; color: var(--primary);">
+          <option value="ALL">All Categories</option>
+          <option value="Chest">Chest</option>
+          <option value="Back">Back</option>
+          <option value="Abs">Abs</option>
+          <option value="Biceps">Biceps</option>
+          <option value="Triceps">Triceps</option>
+          <option value="Legs">Legs</option>
+          <option value="Cardio">Cardio</option>
+        </select>
+      </div>
+      <div id="container-history-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </section>
+
+    <!-- SCREEN 3: ANALYTICS & CHARTS -->
+    <section id="screen-analytics" class="screen">
+      <h2 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">📊 Analytics & Weight Trend</h2>
+      <div class="glass-card" style="margin-bottom: 16px;">
+        <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">📈 Body Weight Progression</h3>
+        <canvas id="chart-weight-trend" style="width: 100%; height: 220px;"></canvas>
+      </div>
+      <div class="glass-card">
+        <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">💪 Muscle Group Sets Volume</h3>
+        <canvas id="chart-category-volume" style="width: 100%; height: 220px;"></canvas>
+      </div>
+    </section>
+
+    <!-- SCREEN 4: EXERCISE LIBRARY -->
+    <section id="screen-library" class="screen">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 16px; font-weight: 800;">📚 Exercise Catalog</h2>
+        <button class="btn-primary" id="btn-library-add-ex" style="font-size: 12px;">+ Add Movement</button>
+      </div>
+      <div class="grid-2" id="container-library-grid"></div>
+    </section>
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <div class="nav-container">
+      <button class="nav-item active" data-target="screen-today">
+        <span style="font-size: 16px;">🏋️‍♂️</span>
+        <span>Workout</span>
+      </button>
+      <button class="nav-item" data-target="screen-history">
+        <span style="font-size: 16px;">📅</span>
+        <span>History</span>
+      </button>
+      <button class="nav-item" data-target="screen-analytics">
+        <span style="font-size: 16px;">📊</span>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-item" data-target="screen-library">
+        <span style="font-size: 16px;">📚</span>
+        <span>Catalog</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MODAL: ACCOUNT & DEVICE SYNC (Username + PIN) -->
+  <div id="modal-account" class="modal-overlay">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px; font-weight: 800;">👤 Account & Phone/Tablet Sync</h3>
+        <button class="btn-icon" id="close-modal-account">✕</button>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button class="btn-secondary" id="tab-auth-login" style="flex: 1; font-weight: 700;">Account Profile</button>
+        <button class="btn-secondary" id="tab-auth-sync" style="flex: 1; font-weight: 700;">Device Sync Code</button>
+      </div>
+
+      <div id="panel-auth-login">
+        <form id="form-login">
+          <div class="form-group">
+            <label class="form-label">Username (No Email Required)</label>
+            <input type="text" id="input-username" class="form-input" placeholder="e.g. Alex, WorkoutHero" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">4-Digit Passcode / PIN</label>
+            <input type="password" id="input-pin" class="form-input" placeholder="****" maxlength="6" required />
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">Sign In / Register Profile</button>
+        </form>
+      </div>
+
+      <div id="panel-auth-sync" style="display: none;">
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
+          Export your sync code on your phone, then paste it on your tablet to transfer logs instantly without email!
+        </p>
+        <button class="btn-secondary" id="btn-export-sync" style="width: 100%; margin-bottom: 8px;">1. Export Sync Code</button>
+        <textarea id="text-sync-code" class="form-input" rows="3" readonly style="font-size: 10px; font-family: monospace; display: none; margin-bottom: 12px;"></textarea>
+
+        <label class="form-label">2. Import Code on New Device</label>
+        <textarea id="text-import-code" class="form-input" rows="3" placeholder="Paste sync code here..." style="font-size: 10px; font-family: monospace; margin-bottom: 8px;"></textarea>
+        <button class="btn-primary" id="btn-import-sync" style="width: 100%;">Import Profile & Restore Logs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EXERCISE LOGGER -->
+  <div id="modal-logger" class="modal-overlay">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+          <span id="modal-log-category" class="badge-pro">Chest</span>
+          <h3 id="modal-log-title" style="font-size: 16px; font-weight: 800; margin-top: 4px;">Flat Dumbbell Press</h3>
+        </div>
+        <button class="btn-icon" id="close-modal-logger">✕</button>
+      </div>
+
+      <form id="form-exercise-logger">
+        <div id="fields-weight-training">
+          <div class="form-group">
+            <label class="form-label">Weight (<span class="unit-current">kg</span>)</label>
+            <input type="number" step="0.5" id="log-weight" class="form-input" style="font-size: 18px; font-weight: 700;" placeholder="0" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label">Sets</label>
+              <input type="number" min="1" id="log-sets" class="form-input" value="3" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reps per set</label>
+              <input type="number" min="1" id="log-reps" class="form-input" value="10" />
+            </div>
+          </div>
+        </div>
+
+        <div id="fields-cardio" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">Distance (km / miles)</label>
+            <input type="number" step="0.1" id="log-distance" class="form-input" placeholder="2.5" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label">Pace (min/km)</label>
+              <input type="text" id="log-pace" class="form-input" placeholder="5:30" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Calories (kcal)</label>
+              <input type="number" id="log-calories" class="form-input" placeholder="180" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes (Optional)</label>
+          <input type="text" id="log-notes" class="form-input" placeholder="e.g. Good pump!" />
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 16px;">
+          <button type="button" class="btn-secondary" id="btn-delete-log" style="color: #f43f5e; display: none;">Delete</button>
+          <button type="submit" class="btn-primary" style="flex: 1; padding: 12px;">Save Exercise Log</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD CUSTOM EXERCISE -->
+  <div id="modal-custom-ex" class="modal-overlay">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px; font-weight: 800;">✨ Add Custom Movement</h3>
+        <button class="btn-icon" id="close-modal-custom-ex">✕</button>
+      </div>
+
+      <form id="form-custom-ex">
+        <div class="form-group">
+          <label class="form-label">Movement Name</label>
+          <input type="text" id="custom-ex-name" class="form-input" placeholder="e.g. Landmine Press" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Muscle Category</label>
+          <select id="custom-ex-category" class="form-input">
+            <option value="Chest">Chest</option>
+            <option value="Back">Back</option>
+            <option value="Abs">Abs</option>
+            <option value="Biceps">Biceps</option>
+            <option value="Triceps">Triceps</option>
+            <option value="Legs">Legs</option>
+            <option value="Cardio">Cardio</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; margin-top: 12px;">Save Custom Movement</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
