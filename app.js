@@ -173,7 +173,6 @@ const Storage = {
       localStorage.setItem('fitpulse_logs_' + userId, JSON.stringify(sampleLogs));
 
       const sampleRecs = [
-        // Multi-category sample logs
         { id: 'rec_1', userId, date: dates[0], exerciseId: 'def-chest-2', exerciseName: 'Flat Dumbbell Press', category: 'Chest', type: 'Weight', weight: 24, sets: 4, reps: 10 },
         { id: 'rec_2', userId, date: dates[0], exerciseId: 'def-biceps-1', exerciseName: 'Hammer Curl', category: 'Biceps', type: 'Weight', weight: 14, sets: 3, reps: 12 },
         { id: 'rec_3', userId, date: dates[2], exerciseId: 'def-back-1', exerciseName: 'Lat Pulldowns', category: 'Back', type: 'Weight', weight: 60, sets: 4, reps: 10 },
@@ -218,7 +217,6 @@ function renderWeightCard() {
   const input = document.getElementById('input-daily-weight');
   input.value = currentLog ? currentLog.bodyWeight : '';
 
-  // Weight diff calculation
   const sortedLogs = logs.sort((a, b) => new Date(a.date) - new Date(b.date));
   const idx = sortedLogs.findIndex(l => l.date === state.selectedDate);
   const badge = document.getElementById('weight-diff-badge');
@@ -261,7 +259,7 @@ function renderLoggedToday() {
           </div>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${detail}</div>
         </div>
-        <span style="font-size: 14px;">✏️</span>
+        <span style="font-size: 14px;">✏️ Edit</span>
       </div>
     `;
   }).join('');
@@ -318,8 +316,11 @@ function renderHistory() {
   container.innerHTML = sortedDates.map(d => {
     const sess = dateMap[d];
     const recsHtml = sess.records.map(r => `
-      <div style="font-size: 12px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-top: 4px;">
-        <strong>${r.exerciseName}</strong> (${r.category}) - ${r.type === 'Cardio' ? `${r.distance}km` : `${r.sets}×${r.reps} @ ${r.weight}${state.unit}`}
+      <div style="font-size: 12px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong>${r.exerciseName}</strong> (${r.category}) - ${r.type === 'Cardio' ? `${r.distance}km` : `${r.sets}×${r.reps} @ ${r.weight}${state.unit}`}
+        </div>
+        <button class="btn-secondary" onclick="openLoggerForEdit('${r.id}')" style="padding: 2px 8px; font-size: 10px;">Edit</button>
       </div>
     `).join('');
 
@@ -356,7 +357,6 @@ function renderCharts() {
   const logs = Storage.getDailyLogs(state.currentUser.id).sort((a, b) => new Date(a.date) - new Date(b.date));
   const records = Storage.getWorkoutRecords(state.currentUser.id);
 
-  // 1. Weight Chart
   const ctxWeight = document.getElementById('chart-weight-trend').getContext('2d');
   if (weightChartInstance) weightChartInstance.destroy();
   weightChartInstance = new Chart(ctxWeight, {
@@ -375,7 +375,6 @@ function renderCharts() {
     options: { responsive: true, maintainAspectRatio: false }
   });
 
-  // 2. Volume Chart
   const catCounts = {};
   records.forEach(r => { catCounts[r.category] = (catCounts[r.category] || 0) + (r.sets || 1); });
   const ctxVol = document.getElementById('chart-category-volume').getContext('2d');
@@ -394,9 +393,19 @@ function renderCharts() {
   });
 }
 
+// Populate Movement Select Dropdown inside Modal
+function populateMovementSelect(selectedExId) {
+  const allEx = Storage.getAllExercises(state.currentUser.id);
+  const select = document.getElementById('log-exercise-select');
+  select.innerHTML = allEx.map(ex => `
+    <option value="${ex.id}" ${ex.id === selectedExId ? 'selected' : ''}>
+      [${ex.category}] ${ex.name}
+    </option>
+  `).join('');
+}
+
 // Event Listeners & Modals
 function setupEventListeners() {
-  // Bottom Navigation Switcher
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -408,7 +417,6 @@ function setupEventListeners() {
     });
   });
 
-  // Date Navigation
   document.getElementById('btn-prev-day').addEventListener('click', () => shiftDate(-1));
   document.getElementById('btn-next-day').addEventListener('click', () => shiftDate(1));
   document.getElementById('date-picker-input').addEventListener('change', (e) => {
@@ -416,7 +424,6 @@ function setupEventListeners() {
     renderAll();
   });
 
-  // Unit Toggle
   document.getElementById('btn-toggle-unit').addEventListener('click', () => {
     state.unit = state.unit === 'kg' ? 'lbs' : 'kg';
     document.getElementById('unit-kg-label').style.color = state.unit === 'kg' ? '#22c55e' : '#9ca3af';
@@ -424,7 +431,6 @@ function setupEventListeners() {
     renderAll();
   });
 
-  // Category Pill Filters
   document.querySelectorAll('.pill-btn').forEach(pill => {
     pill.addEventListener('click', () => {
       document.querySelectorAll('.pill-btn').forEach(p => p.classList.remove('active'));
@@ -434,13 +440,11 @@ function setupEventListeners() {
     });
   });
 
-  // Search Input
   document.getElementById('input-search-exercise').addEventListener('input', (e) => {
     state.searchQuery = e.target.value;
     renderExerciseGrid();
   });
 
-  // Daily Weight Form
   document.getElementById('form-weight-logger').addEventListener('submit', (e) => {
     e.preventDefault();
     const val = parseFloat(document.getElementById('input-daily-weight').value);
@@ -450,7 +454,30 @@ function setupEventListeners() {
     }
   });
 
-  // Modals Open/Close
+  // Movement selection dropdown change handler
+  document.getElementById('log-exercise-select').addEventListener('change', (e) => {
+    const exId = e.target.value;
+    const allEx = Storage.getAllExercises(state.currentUser.id);
+    const ex = allEx.find(x => x.id === exId);
+    if (ex) {
+      state.activeExercise = ex;
+      document.getElementById('modal-log-title').textContent = ex.name;
+      document.getElementById('modal-log-category').textContent = ex.category;
+      const isCardio = ex.type === 'Cardio';
+      document.getElementById('fields-weight-training').style.display = isCardio ? 'none' : 'block';
+      document.getElementById('fields-cardio').style.display = isCardio ? 'block' : 'none';
+    }
+  });
+
+  // Delete Log Button Handler
+  document.getElementById('btn-delete-log').addEventListener('click', () => {
+    if (state.editingRecordId) {
+      Storage.deleteWorkoutRecord(state.currentUser.id, state.editingRecordId);
+      closeModal('modal-logger');
+      renderAll();
+    }
+  });
+
   document.getElementById('btn-account-modal').addEventListener('click', () => openModal('modal-account'));
   document.getElementById('close-modal-account').addEventListener('click', () => closeModal('modal-account'));
   document.getElementById('close-modal-logger').addEventListener('click', () => closeModal('modal-logger'));
@@ -458,7 +485,6 @@ function setupEventListeners() {
   document.getElementById('btn-library-add-ex').addEventListener('click', () => openModal('modal-custom-ex'));
   document.getElementById('close-modal-custom-ex').addEventListener('click', () => closeModal('modal-custom-ex'));
 
-  // Login Form
   document.getElementById('form-login').addEventListener('submit', (e) => {
     e.preventDefault();
     const u = document.getElementById('input-username').value;
@@ -474,7 +500,6 @@ function setupEventListeners() {
     }
   });
 
-  // Custom Movement Form
   document.getElementById('form-custom-ex').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('custom-ex-name').value;
@@ -486,7 +511,6 @@ function setupEventListeners() {
     }
   });
 
-  // Exercise Logger Form
   document.getElementById('form-exercise-logger').addEventListener('submit', (e) => {
     e.preventDefault();
     const isCardio = state.activeExercise.type === 'Cardio';
@@ -515,6 +539,7 @@ function setupEventListeners() {
     closeModal('modal-logger');
     renderLoggedToday();
     renderExerciseGrid();
+    renderHistory();
   });
 }
 
@@ -534,12 +559,14 @@ function openLoggerForNew(exId) {
   state.activeExercise = allEx.find(e => e.id === exId);
   state.editingRecordId = null;
 
+  populateMovementSelect(state.activeExercise.id);
   document.getElementById('modal-log-title').textContent = state.activeExercise.name;
   document.getElementById('modal-log-category').textContent = state.activeExercise.category;
   
   const isCardio = state.activeExercise.type === 'Cardio';
   document.getElementById('fields-weight-training').style.display = isCardio ? 'none' : 'block';
   document.getElementById('fields-cardio').style.display = isCardio ? 'block' : 'none';
+  document.getElementById('btn-delete-log').style.display = 'none';
 
   openModal('modal-logger');
 }
@@ -548,14 +575,18 @@ function openLoggerForEdit(recordId) {
   const rec = Storage.getWorkoutRecords(state.currentUser.id).find(r => r.id === recordId);
   if (!rec) return;
   state.editingRecordId = rec.id;
-  state.activeExercise = { id: rec.exerciseId, name: rec.exerciseName, category: rec.category, type: rec.type };
+  
+  const allEx = Storage.getAllExercises(state.currentUser.id);
+  state.activeExercise = allEx.find(x => x.id === rec.exerciseId) || { id: rec.exerciseId, name: rec.exerciseName, category: rec.category, type: rec.type };
 
+  populateMovementSelect(state.activeExercise.id);
   document.getElementById('modal-log-title').textContent = rec.exerciseName;
   document.getElementById('modal-log-category').textContent = rec.category;
 
   const isCardio = rec.type === 'Cardio';
   document.getElementById('fields-weight-training').style.display = isCardio ? 'none' : 'block';
   document.getElementById('fields-cardio').style.display = isCardio ? 'block' : 'none';
+  document.getElementById('btn-delete-log').style.display = 'inline-block';
 
   if (isCardio) {
     document.getElementById('log-distance').value = rec.distance || '';
@@ -566,9 +597,9 @@ function openLoggerForEdit(recordId) {
     document.getElementById('log-sets').value = rec.sets || '';
     document.getElementById('log-reps').value = rec.reps || '';
   }
+  document.getElementById('log-notes').value = rec.notes || '';
 
   openModal('modal-logger');
 }
 
-// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', initApp);
